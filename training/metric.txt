@@ -1,0 +1,42 @@
+roBERTa:
+
+===== Test Evaluation (Best Checkpoint) =====
+Accuracy: 0.9962
+Macro F1: 0.9963
+Log Loss: 0.0242
+MCC: 0.9947
+Macro ROC-AUC: 0.9998
+
+Electra:
+
+===== ELECTRA Test Evaluation =====
+Model path: C:\Users\ritam\Desktop\FishNet_Prototype\models\electra_small_model\checkpoint-24512
+Samples: 49026
+Accuracy: 0.9931
+Macro F1: 0.9933
+Log Loss: 0.0282
+MCC: 0.9905
+Macro ROC-AUC: 0.9997
+
+===== ELECTRA Android Test Evaluation =====
+Model path: C:\Users\ritam\Desktop\FishNet_Prototype\models\electra_small_android
+Tokenizer source: C:\Users\ritam\Desktop\FishNet_Prototype\models\electra_small_android
+Device used: cuda
+Batch size: 128
+Samples: 49026
+Accuracy: 0.9929
+Macro F1: 0.9931
+Log Loss: 0.0291
+MCC: 0.9903
+Macro ROC-AUC: 0.9997
+
+===== Offline Local App Timing Estimate =====
+Dataset prep time: 12.253s
+Tokenization time: 4.240s
+Tokenizer load time: 0.072s
+Model load time: 3.856s
+Evaluation forward-pass time: 33.723s
+First (cold) inference time: 545.45ms
+Average single inference (30 runs): 22.27ms
+P95 single inference: 28.82ms
+Estimated app startup (tokenizer + model load): 3.929s

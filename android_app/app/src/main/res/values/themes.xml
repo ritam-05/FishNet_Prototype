@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.FishNet" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/fishnet_surface</item>
+        <item name="colorPrimary">@color/fishnet_primary</item>
+        <item name="colorOnPrimary">@color/fishnet_on_primary</item>
+        <item name="colorSecondary">@color/fishnet_secondary</item>
+        <item name="colorOnSecondary">@color/fishnet_on_secondary</item>
+        <item name="colorSurface">@color/fishnet_surface</item>
+        <item name="colorOnSurface">@color/fishnet_on_surface</item>
+    </style>
+</resources>

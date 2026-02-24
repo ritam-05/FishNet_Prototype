@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fishnet_primary">#28D17C</color>
+    <color name="fishnet_on_primary">#0A1A12</color>
+    <color name="fishnet_secondary">#48A8FF</color>
+    <color name="fishnet_on_secondary">#081521</color>
+    <color name="fishnet_surface">#10151F</color>
+    <color name="fishnet_surface_variant">#182233</color>
+    <color name="fishnet_on_surface">#E8EEF8</color>
+    <color name="fishnet_on_surface_dim">#B2BFD2</color>
+    <color name="safe_green">#4CAF50</color>
+    <color name="risk_yellow">#F5C542</color>
+    <color name="risk_orange">#F57C00</color>
+    <color name="phishing_red">#E53935</color>
+    <color name="irrelevant_gray">#8A94A6</color>
+</resources>
