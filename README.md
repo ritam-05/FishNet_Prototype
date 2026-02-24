@@ -4,13 +4,16 @@ FishNet is an on-device Android notification security app. It monitors posted no
 
 ## Download APK (GitHub Release Link)
 
-After uploading `app-release.apk` as a GitHub Release asset named exactly `app-release.apk`, use:
+- Latest release APK:
+  - `https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk`
 
-`https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk`
+- Version-specific APK (`v1.0.1`):
+  - `https://github.com/ritam-05/FishNet_Prototype/releases/download/v1.0.1/app-release.apk`
 
 Markdown:
 
-`[Download Latest APK](https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk)`
+- `[Download Latest APK](https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk)`
+- `[Download APK v1.0.1](https://github.com/ritam-05/FishNet_Prototype/releases/download/v1.0.1/app-release.apk)`
 
 ## What the App Does
 
@@ -39,6 +42,17 @@ Markdown:
 - Blocking behavior:
   - High-risk notifications can be blocked (`cancelNotification`) when blocking conditions are met.
   - Ads can be auto-dismissed based on global/per-app policy.
+
+### Risk Meter Function
+
+- The dashboard "Risk Meter" is a daily aggregate meter.
+- It is computed from today's counts:
+  - `score = (phishingToday * 0.6) + (scamToday * 0.3) + (spamToday * 0.1)`
+- Level mapping:
+  - `LOW` if score `<= 2`
+  - `MEDIUM` if score `<= 5`
+  - `HIGH` if score `> 5`
+- This meter is count-based for the day; it is not a single-notification ML confidence value.
 
 ## ML + Logic Pipeline
 
@@ -165,4 +179,3 @@ Release APK:
 Output:
 
 - `app/build/outputs/apk/release/app-release.apk`
-
