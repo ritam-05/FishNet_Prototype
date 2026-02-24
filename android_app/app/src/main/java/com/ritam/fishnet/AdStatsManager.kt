@@ -1,6 +1,7 @@
 package com.ritam.fishnet
 
 import android.content.Context
+import java.util.Calendar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,7 @@ object AdStatsManager {
     private const val KEY_DETECTED = "total_ads_detected"
     private const val KEY_BLOCKED = "total_ads_blocked"
     private const val KEY_ALLOWED = "total_ads_allowed"
+    private const val KEY_LAST_RESET_AT = "last_reset_at"
 
     private val lock = Mutex()
     private var appContext: Context? = null
@@ -30,6 +32,7 @@ object AdStatsManager {
     suspend fun initialize(context: Context) {
         lock.withLock {
             appContext = context.applicationContext
+            maybeResetDailyLocked()
             state.value = readStatsLocked()
         }
     }
@@ -37,6 +40,7 @@ object AdStatsManager {
     suspend fun recordAdDetected(blocked: Boolean) {
         lock.withLock {
             val prefs = prefsLocked() ?: return
+            maybeResetDailyLocked()
             val current = readStatsLocked()
             val next = current.copy(
                 totalAdsDetected = current.totalAdsDetected + 1,
@@ -47,6 +51,7 @@ object AdStatsManager {
                 .putInt(KEY_DETECTED, next.totalAdsDetected)
                 .putInt(KEY_BLOCKED, next.totalAdsBlocked)
                 .putInt(KEY_ALLOWED, next.totalAdsAllowed)
+                .putLong(KEY_LAST_RESET_AT, todayStartMillis())
                 .apply()
             state.value = next
         }
@@ -54,6 +59,7 @@ object AdStatsManager {
 
     suspend fun getAdStats(): AdStats {
         lock.withLock {
+            maybeResetDailyLocked()
             val refreshed = readStatsLocked()
             state.value = refreshed
             return refreshed
@@ -67,6 +73,32 @@ object AdStatsManager {
             totalAdsBlocked = prefs.getInt(KEY_BLOCKED, 0),
             totalAdsAllowed = prefs.getInt(KEY_ALLOWED, 0)
         )
+    }
+
+    private fun maybeResetDailyLocked() {
+        val prefs = prefsLocked() ?: return
+        val todayStart = todayStartMillis()
+        val lastReset = prefs.getLong(KEY_LAST_RESET_AT, -1L)
+
+        if (lastReset == todayStart) {
+            return
+        }
+
+        prefs.edit()
+            .putInt(KEY_DETECTED, 0)
+            .putInt(KEY_BLOCKED, 0)
+            .putInt(KEY_ALLOWED, 0)
+            .putLong(KEY_LAST_RESET_AT, todayStart)
+            .apply()
+    }
+
+    private fun todayStartMillis(): Long {
+        val now = Calendar.getInstance()
+        now.set(Calendar.HOUR_OF_DAY, 0)
+        now.set(Calendar.MINUTE, 0)
+        now.set(Calendar.SECOND, 0)
+        now.set(Calendar.MILLISECOND, 0)
+        return now.timeInMillis
     }
 
     private fun prefsLocked() = appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

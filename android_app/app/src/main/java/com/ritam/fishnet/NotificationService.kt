@@ -116,8 +116,11 @@ class NotificationService : NotificationListenerService() {
             packageName = sbn.packageName,
             timestamp = timestamp
         )
+        val aggressiveEnabled = AppSettings.isAggressiveEnabled(applicationContext)
 
-        if (decision.shouldBlock) {
+        val aggressiveNonAdBlock =
+            aggressiveEnabled && shouldAggressiveBlock(decision.label) && decision.label != SecurityLabel.IRRELEVANT_AD
+        if (decision.shouldBlock || aggressiveNonAdBlock) {
             sbn.key?.let { cancelNotification(it) }
         }
 
@@ -153,6 +156,14 @@ class NotificationService : NotificationListenerService() {
                 scamSubtype = scamSubtype
             )
             NotificationStatsRepository.recordProcessed(NotificationCategory.SCAM)
+            showScamAlert(
+                notificationId = buildAlertId(sbn, source, "scam|$text"),
+                packageName = sbn.packageName,
+                confidence = decision.finalRisk,
+                text = text,
+                scamSubtype = scamSubtype,
+                confidenceLevel = decision.riskMeter.name
+            )
             return ProcessOutcome.SCAM
         }
 
@@ -170,7 +181,7 @@ class NotificationService : NotificationListenerService() {
         }
         var adWasBlocked = false
         if (decision.label == SecurityLabel.IRRELEVANT_AD) {
-            adWasBlocked = shouldBlockAdvertisement(sbn.packageName)
+            adWasBlocked = aggressiveEnabled || shouldBlockAdvertisement(sbn.packageName)
             AdStatsManager.recordAdDetected(blocked = adWasBlocked)
             if (adWasBlocked) {
                 sbn.key?.let { cancelNotification(it) }
@@ -257,6 +268,7 @@ class NotificationService : NotificationListenerService() {
             promptProtectedMode = promptProtectedMode
         )
         val body = buildString {
+            append("Phishing detected: ")
             append(phishingSubtype)
             append("\nRisk ${(confidence * 100).toInt()}% ($confidenceLevel)")
             if (promptProtectedMode) {
@@ -268,10 +280,43 @@ class NotificationService : NotificationListenerService() {
         val alert = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_error)
             .setContentTitle("FishNet Phishing Alert")
-            .setContentText("$phishingSubtype detected from $packageName")
+            .setContentText("Phishing detected from $packageName")
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(body)
             )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(notificationId, alert)
+    }
+
+    private fun showScamAlert(
+        notificationId: Int,
+        packageName: String,
+        confidence: Float,
+        text: String,
+        scamSubtype: String,
+        confidenceLevel: String
+    ) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val pending = createOpenAppPendingIntent(
+            requestCode = notificationId,
+            source = "scam_alert",
+            packageName = packageName
+        )
+        val body = buildString {
+            append("Scam job detected: ")
+            append(scamSubtype)
+            append("\nRisk ${(confidence * 100).toInt()}% ($confidenceLevel)")
+            append("\n\n")
+            append(text)
+        }
+        val alert = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle("FishNet Scam Alert")
+            .setContentText("Scam job detected from $packageName")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pending)
             .setAutoCancel(true)
@@ -358,6 +403,13 @@ class NotificationService : NotificationListenerService() {
 
     private fun isPhishingLabel(label: SecurityLabel): Boolean {
         return label == SecurityLabel.PHISHING
+    }
+
+    private fun shouldAggressiveBlock(label: SecurityLabel): Boolean {
+        return label == SecurityLabel.IRRELEVANT_AD ||
+            label == SecurityLabel.SCAM ||
+            label == SecurityLabel.SPAM ||
+            label == SecurityLabel.PHISHING
     }
 
     private suspend fun shouldBlockAdvertisement(packageName: String): Boolean {
