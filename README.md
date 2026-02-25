@@ -4,16 +4,11 @@ FishNet is an on-device Android notification security app. It monitors posted no
 
 ## Download APK (GitHub Release Link)
 
-- Latest release APK:
-  - `https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk`
-
-- Version-specific APK (`v1.0.1`):
-  - `https://github.com/ritam-05/FishNet_Prototype/releases/download/v1.0.1/app-release.apk`
+- `https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk`
 
 Markdown:
 
 - `[Download Latest APK](https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk)`
-- `[Download APK v1.0.1](https://github.com/ritam-05/FishNet_Prototype/releases/download/v1.0.1/app-release.apk)`
 
 ## What the App Does
 
