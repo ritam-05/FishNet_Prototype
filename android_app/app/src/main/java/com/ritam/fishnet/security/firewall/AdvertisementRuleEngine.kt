@@ -66,6 +66,30 @@ class AdvertisementRuleEngine {
     private val promoEmojis = listOf("🛍", "🔥", "💰", "🏷", "🎉", "🎁")
     private val priceRegex = Regex("""(\$|₹|rs\.?|inr)\s?\d{1,7}|\b\d{2,7}\s?(usd|inr)\b|\b\d{2,7}\s?only\b""")
     private val shortUrlRegex = Regex("""\b(bit\.ly|tinyurl|goo\.gl|t\.co|cutt\.ly|shorturl|rebrand\.ly)\b""")
+    private val appPromoKeywords = listOf(
+        "premium", "upgrade now", "try premium", "subscribe now", "ad-free", "unlock now",
+        "deal of the day", "great indian festival", "big billion days", "special picks",
+        "recommended for you", "wishlist", "cart waiting", "price dropped in your cart",
+        "supercoin", "plus zone", "prime day", "lightning deal"
+    )
+    private val commercePushKeywords = listOf(
+        "offer", "sale", "deal", "discount", "cashback", "price drop", "price dropped",
+        "wishlist", "cart", "shop now", "buy now", "festival", "coupon", "voucher",
+        "limited time", "ending soon", "today only", "special price"
+    )
+    private val knownPromoHeavyApps = listOf(
+        "com.flipkart.android",
+        "com.amazon.mshop.android.shopping",
+        "in.amazon.mshop.android.shopping",
+        "com.myntra.android",
+        "com.meesho.supply",
+        "com.snapdeal.main",
+        "com.ril.ajio",
+        "com.shopclues",
+        "com.tatacliq",
+        "com.nykaa",
+        "com.spotify.music"
+    )
 
     private val phishingActionKeywords = listOf(
         "click", "verify", "login", "confirm", "update", "reset", "submit", "authenticate", "unlock"
@@ -131,11 +155,23 @@ class AdvertisementRuleEngine {
             matchedSignals += "short_price_push"
         }
 
-        val packageHint = packageName.lowercase(Locale.ROOT).let { pkg ->
+        val normalizedPackage = packageName.lowercase(Locale.ROOT)
+        val packageHint = normalizedPackage.let { pkg ->
             pkg.contains("shop") || pkg.contains("store") || pkg.contains("deal") || pkg.contains("mall")
         }
         if (packageHint && matchedSignals.isNotEmpty()) {
             matchedSignals += "commerce_package_hint"
+        }
+
+        val isKnownPromoApp = knownPromoHeavyApps.any { normalizedPackage == it || normalizedPackage.startsWith("$it.") }
+        val hasAppPromoCopy = containsAny(normalizedText, appPromoKeywords)
+        val hasCommercePushCopy = containsAny(normalizedText, commercePushKeywords)
+        if (isKnownPromoApp && (matchedSignals.isNotEmpty() || hasAppPromoCopy)) {
+            matchedSignals += "known_promo_app_signal"
+        } else if (isKnownPromoApp && hasCommercePushCopy) {
+            matchedSignals += "known_app_commerce_push_signal"
+        } else if (hasAppPromoCopy && packageHint) {
+            matchedSignals += "package_promo_copy_signal"
         }
 
         val hasPromoSignals = matchedSignals.isNotEmpty()

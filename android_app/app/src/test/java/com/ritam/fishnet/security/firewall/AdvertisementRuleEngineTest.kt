@@ -34,4 +34,31 @@ class AdvertisementRuleEngineTest {
         assertFalse(result.isAdvertisement)
         assertTrue(result.excludedByPhishingSignals)
     }
+
+    @Test
+    fun detectsKnownShoppingAppPromotions() {
+        val result = engine.analyze(
+            text = "Big Billion Days deal of the day is live. Add to cart now.",
+            packageName = "com.flipkart.android"
+        )
+        assertTrue(result.isAdvertisement)
+    }
+
+    @Test
+    fun detectsSpotifyUpgradePromotions() {
+        val result = engine.analyze(
+            text = "Try Premium now for ad-free music. Upgrade now.",
+            packageName = "com.spotify.music"
+        )
+        assertTrue(result.isAdvertisement)
+    }
+
+    @Test
+    fun detectsAmazonCartAndWishlistPromotions() {
+        val result = engine.analyze(
+            text = "Price dropped in your cart. Limited time offer, shop now.",
+            packageName = "in.amazon.mshop.android.shopping"
+        )
+        assertTrue(result.isAdvertisement)
+    }
 }

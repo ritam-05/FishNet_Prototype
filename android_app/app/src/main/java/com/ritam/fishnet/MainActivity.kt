@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -30,7 +32,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvScamToday: TextView
     private lateinit var tvSpamToday: TextView
     private lateinit var tvAdsToday: TextView
-    private lateinit var tvAdsBlockedTotal: TextView
+    private lateinit var dropdownAdsBlockedToday: AutoCompleteTextView
+    private lateinit var adsBlockedAdapter: ArrayAdapter<String>
     private lateinit var tvAdSuppressionEfficiency: TextView
     private lateinit var tvRiskMeter: TextView
     private lateinit var tvLastThreat: TextView
@@ -53,6 +56,7 @@ class MainActivity : AppCompatActivity() {
             UserFeedbackRepository.initialize(applicationContext)
             AdStatsManager.initialize(applicationContext)
             PerAppAdControlManager.initialize(applicationContext)
+            AdBlockHistoryManager.initialize(applicationContext)
         }
 
         requestPostNotificationPermissionIfNeeded()
@@ -80,13 +84,19 @@ class MainActivity : AppCompatActivity() {
         tvScamToday = findViewById(R.id.tvScamToday)
         tvSpamToday = findViewById(R.id.tvSpamToday)
         tvAdsToday = findViewById(R.id.tvAdsToday)
-        tvAdsBlockedTotal = findViewById(R.id.tvAdsBlockedTotal)
+        dropdownAdsBlockedToday = findViewById(R.id.dropdownAdsBlockedToday)
         tvAdSuppressionEfficiency = findViewById(R.id.tvAdSuppressionEfficiency)
         tvRiskMeter = findViewById(R.id.tvRiskMeter)
         tvLastThreat = findViewById(R.id.tvLastThreat)
         btnGrantAccess = findViewById(R.id.btnGrantAccess)
         switchProtection = findViewById(R.id.switchProtection)
         switchAutoBlockAds = findViewById(R.id.switchAutoBlockAds)
+        adsBlockedAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_dropdown_item_1line,
+            mutableListOf()
+        )
+        dropdownAdsBlockedToday.setAdapter(adsBlockedAdapter)
     }
 
     private fun bindClicks() {
@@ -119,8 +129,16 @@ class MainActivity : AppCompatActivity() {
                 tvPhishingToday.text = state.phishingToday.toString()
                 tvScamToday.text = state.scamToday.toString()
                 tvSpamToday.text = state.spamToday.toString()
-                tvAdsToday.text = state.adsToday.toString()
-                tvAdsBlockedTotal.text = state.adsBlockedTotal.toString()
+                tvAdsToday.text = state.adsBlockedTotal.toString()
+                val blockedItems = if (state.blockedAdsToday.isEmpty()) {
+                    listOf(getString(R.string.no_blocked_ads_today))
+                } else {
+                    state.blockedAdsToday
+                }
+                adsBlockedAdapter.clear()
+                adsBlockedAdapter.addAll(blockedItems)
+                adsBlockedAdapter.notifyDataSetChanged()
+                dropdownAdsBlockedToday.setText(blockedItems.first(), false)
                 tvAdSuppressionEfficiency.text = "${state.adSuppressionEfficiencyPercent}%"
                 tvRiskMeter.text = "${state.riskLevel} (${String.format("%.1f", state.riskScore)})"
                 val riskColor = when (state.riskLevel) {

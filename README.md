@@ -1,157 +1,127 @@
 # FishNet Android App
 
-FishNet is an on-device Android notification security app. It monitors posted notifications, scores risk, classifies threats, and can auto-dismiss promotional ads.
+FishNet is an on-device Android notification security app. It classifies notifications as useful, ad/promotional, spam, scam, or phishing, and can auto-dismiss unwanted promotional notifications.
 
-## Download APK (GitHub Release Link)
+## Download APK
 
-- `https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk`
+- [Download Latest APK](https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk)
 
-Markdown:
+## Current App Behavior
 
-- `[Download Latest APK](https://github.com/ritam-05/FishNet_Prototype/releases/latest/download/app-release.apk)`
+- Scans notifications in real time using `NotificationListenerService`.
+- Runs startup scans when:
+  - listener connects
+  - app starts
+  - device reboots (if protection is enabled)
+- Startup summary now enforces:
+  - `useful = scanned - phishing - scam - irrelevant`
+  - so every scanned notification is counted.
 
-## What the App Does
+## Classification Labels
 
-- Scans notifications in real time using a `NotificationListenerService`.
-- Runs startup scans when the listener connects or app launches.
-- Classifies each notification into:
-  - `SAFE_USEFUL`
-  - `IRRELEVANT_AD`
-  - `SPAM`
-  - `SCAM`
-  - `PHISHING`
-- Tracks dashboard metrics:
-  - scanned today
-  - phishing/scam/spam/ad counts
-  - ad blocking efficiency
-  - risk meter + last threat
-- Stores history and shows it in `HistoryActivity`.
-- Supports feedback overrides and log export from `SettingsActivity`.
+- `SAFE_USEFUL`
+- `IRRELEVANT_AD`
+- `SPAM`
+- `SCAM`
+- `PHISHING`
 
-## Threat and Risk Behavior
+## Blocking Logic
 
-- Risk is computed from multiple signals (ML score + text signals + domain risk + app/tier behavior signals).
-- Phishing is emitted only when strict conditions are met (credential/action/route signals + risk threshold).
-- Phishing subtype display is risk-gated:
-  - `PHISHING_*` subtype appears only when `finalRisk > 0.50`.
-- Blocking behavior:
-  - High-risk notifications can be blocked (`cancelNotification`) when blocking conditions are met.
-  - Ads can be auto-dismissed based on global/per-app policy.
+- `IRRELEVANT_AD` notifications can be dismissed based on:
+  - auto-block switch
+  - per-app policy
+  - aggressive mode
+- Aggressive mode blocks: `IRRELEVANT_AD`, `SPAM`, `SCAM`, `PHISHING`.
+- Flipkart/Amazon promotional notifications are force-blocked when classified as ad/promo.
+- WhatsApp handling:
+  - default path is useful
+  - only WhatsApp ad-like messages from unknown numbers are blocked
+  - known-contact WhatsApp messages are not blocked by this rule
 
-### Risk Meter Function
+## Phishing and Scam Alerts
 
-- The dashboard "Risk Meter" is a daily aggregate meter.
-- It is computed from today's counts:
-  - `score = (phishingToday * 0.6) + (scamToday * 0.3) + (spamToday * 0.1)`
-- Level mapping:
-  - `LOW` if score `<= 2`
-  - `MEDIUM` if score `<= 5`
-  - `HIGH` if score `> 5`
-- This meter is count-based for the day; it is not a single-notification ML confidence value.
+- Phishing alert notification is shown only when phishing risk is `>= 60%`.
+- Phishing subtype labels are shown only when risk is `> 50%`.
+- Scam detection shows a dedicated scam alert notification.
+- Tapping FishNet alerts opens the app.
 
-## ML + Logic Pipeline
+## Dashboard Metrics
 
-FishNet does not rely on ML alone. It uses a layered pipeline where deterministic logic runs before and after model scoring:
+Main dashboard shows:
 
-1. Signal extraction and context
-- Resolve app tier and intent type.
-- Extract text/security signals (URL, urgency, action verbs, financial/credential cues).
-- Run domain analysis (suspicious TLDs, short links, reputation memory).
+- notifications scanned today
+- phishing today
+- scam today
+- spam today
+- total ads blocked today
+- ads blocked today history (dropdown list)
+- ad suppression efficiency
+- risk meter
+- last detected threat
 
-2. Rule-first fast paths
-- Hard-safe intents short-circuit to `SAFE_USEFUL`.
-- Email-specific threat engine can directly resolve safe/ad/phishing-like outcomes.
-- Advertisement rules can directly classify `IRRELEVANT_AD` (with phishing-signal exclusion).
-- Spam/scam logic can resolve labels before full ML-risk fusion.
+### Ads Blocked Today History
 
-3. ML scoring
-- ONNX model produces phishing probability from notification text.
-- This score is fused with rule/context/domain/app-behavior signals in the risk engine.
+- Every blocked ad is stored temporarily in local storage.
+- History retention is 24 hours.
+- Old entries are pruned automatically.
+- UI count and dropdown list are sourced from the same history store to avoid mismatch.
 
-4. Final decision logic
-- Final risk is calibrated and thresholded by app tier.
-- Phishing requires strict multi-condition checks, not just high probability.
-- Subtype labeling is post-gated by risk (`PHISHING_*` shown only when `finalRisk > 0.50`).
+## ML + Rule Engine
 
-5. Policy and user feedback layer
-- Blocking and protected-mode prompts are applied from final risk/label.
-- Ad dismissal policy is applied separately (global + per-app controls).
-- User feedback overrides can adjust/replace classification labels.
+FishNet uses hybrid detection, not ML-only:
 
-### How ML Is Used (Implementation Detail)
+1. Extracts signals from text:
+- URLs, urgency, action verbs, credential/payment cues
 
-- Runtime: ONNX Runtime on-device (`model_int8.onnx` in app assets).
-- Tokenization: HuggingFace-compatible tokenizer (`tokenizer.json`) with max sequence length `128`.
-- Model inputs:
-  - `input_ids`
-  - `attention_mask`
-  - `token_type_ids`
-- Model output:
-  - `logits` for `4` classes:
-    - `0 = SAFE`
-    - `1 = EMAIL_PHISHING`
-    - `2 = SMS_PHISHING`
-    - `3 = URL_PHISHING`
-- ML score usage:
-  - Softmax confidence is converted to phishing probability.
-  - Probability is fused with rule/context/domain/app-memory signals in `RiskEngine`.
-  - Final phishing decision still requires rule conditions (ML-only high score is not enough).
-- Calibration and guardrails:
-  - Confidence thresholding is applied (default model threshold `0.75`).
-  - Suspicious URL / SMS / email heuristics can up-rank risk.
-  - Casual-benign text guardrail can force safe classification to reduce false positives.
-- Fail-safe behavior:
-  - If model init/inference fails, FishNet falls back safely and avoids hard-failing the app.
+2. Runs deterministic rule engines:
+- ad rule engine
+- scam logic
+- spam frequency/repeat checks
+- email-specific threat logic
 
-## Ad Blocking
+3. Runs on-device ML scoring:
+- ONNX model (`model_int8.onnx`)
+- tokenizer (`tokenizer.json`)
 
-- Ad detection uses keyword/pattern/url/template signals with phishing exclusion logic.
-- If classified as `IRRELEVANT_AD`, FishNet checks policy and may dismiss the notification.
-- Global auto-dismiss is controlled from the main dashboard switch.
-- Per-app ad policy support exists in `PerAppAdControlManager`.
+4. Combines signals in risk engine:
+- ML score + signal strength + domain risk + app/tier context
+
+5. Applies strict final gates:
+- phishing requires multiple conditions, not only model score
+- subtype and alert visibility are risk-gated
 
 ## App Screens
 
-- `MainActivity`
-  - protection toggle
-  - auto-block ads toggle
-  - live security metrics
-  - access to history/settings
-- `HistoryActivity`
-  - list of scanned threat results
-- `SettingsActivity`
-  - aggressive mode toggle
-  - confidence threshold slider
-  - clear history
-  - export logs as text via share intent
+- `MainActivity`: protection toggles + metrics
+- `HistoryActivity`: stored scan results
+- `SettingsActivity`: aggressive mode, confidence threshold, clear history, export logs
 
-## Startup / Boot Behavior
+## Boot Behavior
 
-- `BootCompletedReceiver` listens to:
-  - `BOOT_COMPLETED`
-  - `LOCKED_BOOT_COMPLETED`
-  - `MY_PACKAGE_REPLACED`
-- On boot/package update, FishNet:
-  - attempts listener rebind
-  - triggers startup scan (if protection + notification access are enabled)
-  - launches app UI where allowed by OS background launch rules
+`BootCompletedReceiver` listens to:
+
+- `BOOT_COMPLETED`
+- `LOCKED_BOOT_COMPLETED`
+- `MY_PACKAGE_REPLACED`
+
+When enabled, it requests notification listener rebind and triggers startup scan.
 
 ## Required Permissions
 
 - `android.permission.POST_NOTIFICATIONS`
 - `android.permission.READ_CONTACTS`
 - `android.permission.RECEIVE_BOOT_COMPLETED`
-- notification listener binding via:
-  - `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE` (service permission)
+- notification listener access (user-enabled in system settings)
 
 ## Tech Stack
 
-- Kotlin + Android SDK
-- ONNX Runtime (on-device ML inference)
-- Room (security/profile data)
+- Kotlin
+- Android SDK
+- ONNX Runtime
+- Room
 - Coroutines + StateFlow
 
-## SDK/Build Targets
+## SDK Targets
 
 - `minSdk = 26`
 - `targetSdk = 36`
@@ -173,4 +143,4 @@ Release APK:
 
 Output:
 
-- `app/build/outputs/apk/release/app-release.apk`
+- `android_app/app/build/outputs/apk/release/app-release.apk`

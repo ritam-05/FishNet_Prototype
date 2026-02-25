@@ -175,7 +175,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="@string/ads_today"
+                    android:text="@string/ads_blocked_today"
                     android:textColor="@color/fishnet_on_surface_dim"
                     android:textSize="13sp" />
 
@@ -190,23 +190,27 @@
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/tvAdsBlockedLabel"
+                    android:id="@+id/tvAdsBlockedTodayHistoryLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="@string/ads_blocked_total"
+                    android:text="@string/ads_blocked_today_history"
                     android:textColor="@color/fishnet_on_surface_dim"
                     android:textSize="13sp" />
 
-                <TextView
-                    android:id="@+id/tvAdsBlockedTotal"
-                    android:layout_width="wrap_content"
+                <AutoCompleteTextView
+                    android:id="@+id/dropdownAdsBlockedToday"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="0"
+                    android:layout_marginTop="6dp"
+                    android:backgroundTint="@color/fishnet_on_surface_dim"
+                    android:completionThreshold="1"
+                    android:dropDownHeight="240dp"
+                    android:inputType="none"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
                     android:textColor="@color/fishnet_on_surface"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    android:textSize="13sp" />
 
                 <TextView
                     android:id="@+id/tvAdEfficiencyLabel"

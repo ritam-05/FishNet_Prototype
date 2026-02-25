@@ -18,6 +18,7 @@ data class DashboardUiState(
     val adsTotal: Int = 0,
     val spamTotal: Int = 0,
     val adsBlockedTotal: Int = 0,
+    val blockedAdsToday: List<String> = emptyList(),
     val adSuppressionEfficiencyPercent: Int = 0,
     val autoBlockPromotionsEnabled: Boolean = true,
     val riskScore: Float = 0f,
@@ -65,8 +66,27 @@ class DashboardViewModel : ViewModel() {
             AdStatsManager.statsFlow.collect { adStats ->
                 val current = _uiState.value
                 _uiState.value = current.copy(
-                    adsBlockedTotal = adStats.totalAdsBlocked,
                     adSuppressionEfficiencyPercent = adStats.suppressionEfficiencyPercent
+                )
+            }
+        }
+        viewModelScope.launch {
+            AdBlockHistoryManager.historyFlow.collect { entries ->
+                val current = _uiState.value
+                val rows = entries.map { entry ->
+                    val preview = entry.text
+                        .replace('\n', ' ')
+                        .trim()
+                        .take(80)
+                    if (preview.isBlank()) {
+                        entry.packageName
+                    } else {
+                        "${entry.packageName}: $preview"
+                    }
+                }
+                _uiState.value = current.copy(
+                    adsBlockedTotal = entries.size,
+                    blockedAdsToday = rows
                 )
             }
         }
