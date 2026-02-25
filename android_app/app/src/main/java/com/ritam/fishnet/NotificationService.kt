@@ -460,6 +460,9 @@ class NotificationService : NotificationListenerService() {
         if (isWhatsAppPackage(packageName)) {
             return false
         }
+        if (isSocialMediaPackage(packageName)) {
+            return false
+        }
         return label == SecurityLabel.IRRELEVANT_AD ||
             label == SecurityLabel.SCAM ||
             label == SecurityLabel.SPAM ||
@@ -475,6 +478,9 @@ class NotificationService : NotificationListenerService() {
         if (isForceBlockedPromoPackage(packageName)) return true
         if (isWhatsAppPackage(packageName)) {
             return isUnknownWhatsAppSender(notification = notification, fallbackText = text)
+        }
+        if (isSocialMediaPackage(packageName)) {
+            return false
         }
         if (aggressiveEnabled) return true
         val globalAdBlockEnabled = AppSettings.isGlobalAdBlockEnabled(applicationContext)
@@ -494,6 +500,21 @@ class NotificationService : NotificationListenerService() {
     private fun isWhatsAppPackage(packageName: String): Boolean {
         val normalized = packageName.lowercase()
         return normalized == "com.whatsapp" || normalized == "com.whatsapp.w4b"
+    }
+
+    private fun isSocialMediaPackage(packageName: String): Boolean {
+        val normalized = packageName.lowercase()
+        if (isWhatsAppPackage(normalized)) return true
+        return normalized == "com.instagram.android" ||
+            normalized == "com.twitter.android" ||
+            normalized == "com.facebook.katana" ||
+            normalized == "com.facebook.orca" ||
+            normalized == "org.telegram.messenger" ||
+            normalized == "org.thunderdog.challegram" ||
+            normalized == "com.snapchat.android" ||
+            normalized == "com.discord" ||
+            normalized == "com.reddit.frontpage" ||
+            normalized == "com.linkedin.android"
     }
 
     private fun normalizeWhatsAppDecision(
@@ -589,6 +610,7 @@ class NotificationService : NotificationListenerService() {
         text: String,
         decision: SecurityDecision
     ): SecurityDecision {
+        if (isSocialMediaPackage(packageName)) return decision
         if (isWhatsAppPackage(packageName)) return decision
         if (decision.label == SecurityLabel.PHISHING || decision.label == SecurityLabel.SCAM) return decision
 
