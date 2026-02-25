@@ -124,11 +124,21 @@ class NotificationService : NotificationListenerService() {
             packageName = sbn.packageName,
             timestamp = timestamp
         )
-        val normalizedDecision = normalizeWhatsAppDecision(
+        var normalizedDecision = normalizeWhatsAppDecision(
             packageName = sbn.packageName,
             notification = sbn.notification,
             text = text,
             decision = decision
+        )
+        normalizedDecision = normalizeShoppingPromoDecision(
+            packageName = sbn.packageName,
+            text = text,
+            decision = normalizedDecision
+        )
+        normalizedDecision = normalizeGeneralPromoDecision(
+            packageName = sbn.packageName,
+            text = text,
+            decision = normalizedDecision
         )
         val aggressiveEnabled = AppSettings.isAggressiveEnabled(applicationContext)
 
@@ -510,6 +520,99 @@ class NotificationService : NotificationListenerService() {
             label = SecurityLabel.SAFE_USEFUL,
             threatSubtype = null,
             shouldBlock = false,
+            promptProtectedMode = false,
+            lowPriorityBucket = false
+        )
+    }
+
+    private fun normalizeShoppingPromoDecision(
+        packageName: String,
+        text: String,
+        decision: SecurityDecision
+    ): SecurityDecision {
+        val normalizedPackage = packageName.lowercase()
+        val strictPromoPackages = setOf(
+            "com.flipkart.android",
+            "com.amazon.mshop.android.shopping",
+            "in.amazon.mshop.android.shopping"
+        )
+        val shoppingPackages = setOf(
+            "com.flipkart.android",
+            "com.amazon.mshop.android.shopping",
+            "in.amazon.mshop.android.shopping",
+            "com.myntra.android",
+            "com.meesho.supply",
+            "com.snapdeal.main",
+            "com.ril.ajio",
+            "com.tatacliq",
+            "com.nykaa"
+        )
+        val isShoppingApp = shoppingPackages.any { normalizedPackage == it || normalizedPackage.startsWith("$it.") }
+        if (!isShoppingApp) return decision
+        if (decision.label == SecurityLabel.PHISHING || decision.label == SecurityLabel.SCAM) return decision
+
+        val normalizedText = text.lowercase()
+        val transactionalKeywords = listOf(
+            "order placed", "order confirmed", "order packed", "shipped", "out for delivery",
+            "delivered", "delivery by", "return pickup", "refund", "invoice", "cod", "payment received"
+        )
+        val promoKeywords = listOf(
+            "sale", "offer", "discount", "cashback", "coupon", "deal", "limited time",
+            "today only", "shop now", "buy now", "wishlist", "price drop", "festival"
+        )
+        val isTransactional = transactionalKeywords.any { normalizedText.contains(it) }
+        val looksPromotional = promoKeywords.any { normalizedText.contains(it) }
+
+        if (isTransactional) return decision
+        if (strictPromoPackages.any { normalizedPackage == it || normalizedPackage.startsWith("$it.") }) {
+            return decision.copy(
+                label = SecurityLabel.IRRELEVANT_AD,
+                threatSubtype = "Shopping Promotion",
+                shouldBlock = true,
+                promptProtectedMode = false,
+                lowPriorityBucket = false
+            )
+        }
+        if (!looksPromotional && decision.label != SecurityLabel.IRRELEVANT_AD) return decision
+
+        return decision.copy(
+            label = SecurityLabel.IRRELEVANT_AD,
+            threatSubtype = "Shopping Promotion",
+            shouldBlock = true,
+            promptProtectedMode = false,
+            lowPriorityBucket = false
+        )
+    }
+
+    private fun normalizeGeneralPromoDecision(
+        packageName: String,
+        text: String,
+        decision: SecurityDecision
+    ): SecurityDecision {
+        if (isWhatsAppPackage(packageName)) return decision
+        if (decision.label == SecurityLabel.PHISHING || decision.label == SecurityLabel.SCAM) return decision
+
+        val normalizedText = text.lowercase()
+        val transactionalKeywords = listOf(
+            "order placed", "order confirmed", "order packed", "shipped", "out for delivery",
+            "delivered", "delivery by", "return pickup", "refund", "invoice", "payment received",
+            "otp", "verification code", "security alert", "account login", "transaction"
+        )
+        val promoKeywords = listOf(
+            "sale", "offer", "discount", "cashback", "coupon", "deal", "limited time",
+            "today only", "shop now", "buy now", "wishlist", "price drop", "festival",
+            "promo", "promotional", "special price", "bonus", "reward", "new arrivals",
+            "recommended for you", "subscribe now", "upgrade now", "try premium", "ad-free"
+        )
+
+        val isTransactional = transactionalKeywords.any { normalizedText.contains(it) }
+        val isPromotional = promoKeywords.any { normalizedText.contains(it) }
+        if (!isPromotional || isTransactional) return decision
+
+        return decision.copy(
+            label = SecurityLabel.IRRELEVANT_AD,
+            threatSubtype = "Promotional Notification",
+            shouldBlock = true,
             promptProtectedMode = false,
             lowPriorityBucket = false
         )

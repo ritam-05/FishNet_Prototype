@@ -32,7 +32,10 @@ FishNet is an on-device Android notification security app. It classifies notific
   - per-app policy
   - aggressive mode
 - Aggressive mode blocks: `IRRELEVANT_AD`, `SPAM`, `SCAM`, `PHISHING`.
-- Flipkart/Amazon promotional notifications are force-blocked when classified as ad/promo.
+- Flipkart/Amazon notifications are treated with strict promo blocking:
+  - non-transactional notifications are force-classified as ad/promotional and removed.
+- Other app promotional notifications are also auto-removed when promo signals are present and no transactional signals are found.
+- Pre-existing promotional notifications in the tray are also removed during startup scan.
 - WhatsApp handling:
   - default path is useful
   - only WhatsApp ad-like messages from unknown numbers are blocked
